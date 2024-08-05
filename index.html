@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tafuta Neno</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .results-container {
+            width: 80%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+        .card {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .card:last-child {
+            border-bottom: none;
+        }
+        .word {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .definition, .synonyms, .conjugation {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Search for a word...">
+    </div>
+    <div id="results-container" class="results-container"></div>
+
+    <script>
+        async function fetchWords() {
+            const response = await fetch('words.json');
+            return await response.json();
+        }
+
+        function createCard(wordData) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+
+            const word = document.createElement('div');
+            word.classList.add('word');
+            word.textContent = wordData.Word;
+
+            const definition = document.createElement('div');
+            definition.classList.add('definition');
+            definition.textContent = `Meaning: ${wordData.Meaning || 'No meaning available'}`;
+
+            const synonyms = document.createElement('div');
+            synonyms.classList.add('synonyms');
+            synonyms.textContent = `Synonyms: ${wordData.Synonyms && Array.isArray(wordData.Synonyms) ? wordData.Synonyms.join(', ') : 'None'}`;
+
+            const conjugation = document.createElement('div');
+            conjugation.classList.add('conjugation');
+            conjugation.textContent = `Conjugation: ${wordData.Conjugation && Array.isArray(wordData.Conjugation) ? wordData.Conjugation.join(', ') : 'None'}`;
+
+            card.appendChild(word);
+            card.appendChild(definition);
+            card.appendChild(synonyms);
+            card.appendChild(conjugation);
+
+            return card;
+        }
+
+        async function init() {
+            const words = await fetchWords();
+            const wordArray = Object.values(words); // Convert the object to an array
+            const searchInput = document.getElementById('search-input');
+            const resultsContainer = document.getElementById('results-container');
+
+            function renderResults(filteredWords) {
+                resultsContainer.innerHTML = '';
+                filteredWords.forEach(wordData => {
+                    const card = createCard(wordData);
+                    resultsContainer.appendChild(card);
+                });
+            }
+
+            function filterWords(query) {
+                const lowerQuery = query.toLowerCase();
+                const exactMatches = [];
+                const partialMatches = [];
+
+                wordArray.forEach(wordData => {
+                    const word = wordData.Word.toLowerCase();
+                    const meaning = wordData.Meaning ? wordData.Meaning.toLowerCase() : '';
+                    const synonyms = wordData.Synonyms && Array.isArray(wordData.Synonyms) 
+                        ? wordData.Synonyms.map(synonym => synonym.toLowerCase()).join(', ') 
+                        : '';
+                    const conjugation = wordData.Conjugation && Array.isArray(wordData.Conjugation) 
+                        ? wordData.Conjugation.map(conjugate => conjugate.toLowerCase()).join(', ') 
+                        : '';
+
+                    if (word.includes(lowerQuery)) {
+                        exactMatches.push(wordData);
+                    } else if (meaning.includes(lowerQuery) || synonyms.includes(lowerQuery) || conjugation.includes(lowerQuery)) {
+                        partialMatches.push(wordData);
+                    }
+                });
+
+                return [...exactMatches, ...partialMatches];
+            }
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value;
+                const filteredWords = filterWords(query);
+                renderResults(filteredWords);
+            });
+
+            // Initial render
+            renderResults(wordArray);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
